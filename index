@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Портретик — Узнать кто</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--tg-theme-bg-color, #f0e6f6);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 20px 300px 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    .emoji { font-size: 64px; margin-bottom: 20px; }
+    h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
+    .subtitle { font-size: 15px; color: #888; margin-bottom: 24px; line-height: 1.5; }
+    .hidden-block {
+      background: #f8f0ff;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 2px dashed #d4b8e8;
+    }
+    .hidden-name { font-size: 28px; filter: blur(8px); user-select: none; color: #333; font-weight: 700; }
+    .hidden-label { font-size: 13px; color: #aaa; margin-top: 8px; }
+    .subscription-info {
+      background: #fef5ff;
+      border: 1.5px solid #e8c8f0;
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .subscription-info .info-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #9c27b0;
+      margin-bottom: 10px;
+    }
+    .subscription-info .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .subscription-info .info-row:last-child { margin-bottom: 0; }
+    .pay-btn {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      padding: 18px 32px;
+      font-size: 18px;
+      font-weight: 700;
+      width: 100%;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: opacity 0.2s;
+    }
+    .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .price-note { font-size: 13px; color: #aaa; }
+    .price-note a { color: #a855f7; }
+    .result-block { display: none; }
+    .result-emoji { font-size: 56px; margin-bottom: 12px; }
+    .success-badge {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="before-pay">
+      <div class="emoji">🎨</div>
+      <h1>Узнай кто создал портретик</h1>
+      <p class="subtitle">Кто-то описал тебя картинками.<br>Узнай кто это!</p>
+
+      <div class="hidden-block">
+        <div class="hidden-name">Аноним</div>
+        <div class="hidden-label">Имя скрыто — оплати чтобы узнать</div>
+      </div>
+
+      <div class="subscription-info">
+        <div class="info-title">📋 Что вы покупаете:</div>
+        <div class="info-row"><span>🔐</span> Открытие имени</div>
+        <div class="info-row"><span>👑</span> 1 день — <b>19 ₽</b></div>
+        <div class="info-row"><span>🚫</span> Отмена — <b>/cancelvip</b></div>
+      </div>
+
+      <input type="email" id="email-input" placeholder="Ваш email для чека" style="width:100%;padding:16px;border:1.5px solid #ddd;border-radius:12px;font-size:15px;margin-bottom:16px;" required>
+
+      <button class="pay-btn" id="pay-btn" onclick="startPayment()">
+        👀 Узнать за 19 ₽
+      </button>
+      <p class="price-note">Совершая оплату, вы соглашаетесь с <a href="__TERMS_URL__" target="_blank">офертой</a> и <a href="__PRIVACY_URL__" target="_blank">политикой конфиденциальности</a></p>
+    </div>
+
+    <div class="result-block" id="after-pay">
+      <div class="result-emoji">✅</div>
+      <h1>Оплата прошла!</h1>
+      <div class="success-badge">Имя придёт в бот через несколько секунд</div>
+      <p class="subtitle">Проверь чат с ботом!</p>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    document.getElementById('email-input').addEventListener('focus', function() {
+      setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const portraitId = params.get('portrait_id');
+    const ownerId = params.get('owner_id') || '';
+    const userId = tg.initDataUnsafe?.user?.id || '';
+
+    function startPayment() {
+      const email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) {
+        alert('Введите корректный email');
+        return;
+      }
+
+      const btn = document.getElementById('pay-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Открываем оплату...';
+
+      const widget = new cp.CloudPayments();
+      widget.pay('auth', {
+        publicId: '__CP_PUBLIC_ID__',
+        description: 'Подписка Портретик Бот — 1 день за 19 ₽',
+        amount: 19,
+        currency: 'RUB',
+        invoiceId: 'portrait_' + (portraitId || '0') + '_' + Date.now(),
+        accountId: String(userId || ownerId),
+        email: email,
+        data: {
+          portrait_id: portraitId,
+          user_id: ownerId || String(userId),
+          owner_id: ownerId
+        }
+      }, {
+        onSuccess: function() { showSuccess(); },
+        onFail: function() {
+          btn.disabled = false;
+          btn.textContent = '👀 Узнать за 19 ₽';
+        }
+      });
+    }
+
+    function showSuccess() {
+      document.getElementById('before-pay').style.display = 'none';
+      document.getElementById('after-pay').style.display = 'block';
+      setTimeout(() => tg.close(), 4000);
+    }
+  </script>
+</body>
+</html>
