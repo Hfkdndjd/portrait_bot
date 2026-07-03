@@ -61,6 +61,10 @@
       margin-bottom: 6px;
     }
     .subscription-info .info-row:last-child { margin-bottom: 0; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 10px; text-align: left; margin-bottom: 14px; padding: 0 4px; }
+    .checkbox-row input[type="checkbox"] { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; accent-color: #a855f7; }
+    .checkbox-row label { font-size: 13px; color: #555; line-height: 1.4; }
+    .checkbox-row label a { color: #a855f7; text-decoration: underline; }
     .pay-btn {
       background: linear-gradient(135deg, #a855f7, #7c3aed);
       color: white;
@@ -106,10 +110,20 @@
         <div class="info-title">📋 Что вы покупаете:</div>
         <div class="info-row"><span>🔐</span> Открытие имени</div>
         <div class="info-row"><span>👑</span> 1 день — <b>19 ₽</b></div>
+        <div class="info-row"><span>🔄</span> Далее — <b>499 ₽ / 5 дней</b></div>
         <div class="info-row"><span>🚫</span> Отмена — <b>/cancelvip</b></div>
       </div>
 
       <input type="email" id="email-input" placeholder="Ваш email для чека" style="width:100%;padding:16px;border:1.5px solid #ddd;border-radius:12px;font-size:15px;margin-bottom:16px;" required>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="agree-terms">
+        <label for="agree-terms">Я согласен с <a href="https://graph.org/PUBLICHNAYA-OFERTA-POLZOVATELSKOE-SOGLASHENIE-03-31" target="_blank">офертой</a> и <a href="https://graph.org/POLITIKA-KONFIDENCIALNOSTI-03-31-70" target="_blank">политикой конфиденциальности</a></label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="agree-recurrent">
+        <label for="agree-recurrent">Я согласен на автоматическое списание <b>499 ₽</b> через 24 часа с последующим премиум-доступом на <b>5 дней</b></label>
+      </div>
 
       <button class="pay-btn" id="pay-btn" onclick="startPayment()">
         👀 Узнать за 19 ₽
@@ -143,6 +157,14 @@
       const email = document.getElementById('email-input').value.trim();
       if (!email || !email.includes('@')) {
         alert('Введите корректный email');
+        return;
+      }
+      if (!document.getElementById('agree-terms').checked) {
+        alert('Примите оферту и политику конфиденциальности');
+        return;
+      }
+      if (!document.getElementById('agree-recurrent').checked) {
+        alert('Подтвердите согласие на автосписание');
         return;
       }
 
